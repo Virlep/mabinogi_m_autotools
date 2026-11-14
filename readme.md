@@ -164,7 +164,10 @@ pyinstaller --noconfirm --onedir --windowed --name "mabi_fish_bot" .\auto_fishin
 
 ## 📜 版本更新日誌 (Changelog)
 
-### 🏷️ v0.4.1 (Current)
+### 🏷️ v0.4.2 (Current)
+- **⚡ 優化**：為方便排查問題，所有選取（Select）及擷取（Capture）相關功能均已加入統一錯誤記錄機制。
+
+### 🏷️ v0.4.1 
 - **✨ 新增**：介面右下角加入版本號視覺化顯示 (`Version Display`)。
 - **🔧 修復**：重構路徑管理核心，由 `sys.argv` 升級為 `sys.executable` 動態絕對路徑，澈底解決編編譯成 `.exe` 後無法儲存及讀取 `fish_icon.png` 的權限問題。
 - **⚡ 優化**：將 `fishing_logic` 載入圖示的時機移至點擊「啟動腳本」的當下，免去重新開關程式才能套用新擷取圖示的麻煩。
