@@ -12,6 +12,7 @@ import pyautogui
 import customtkinter as ctk
 import keyboard
 import pygetwindow as gw  # 在執行緒內動態引入視窗管理庫
+from PIL import Image
 
 VERSION = "v0.4.1"  # 🟢 增加這一行，定義當前腳本版本
 
@@ -163,72 +164,117 @@ class FishingBotGUI(ctk.CTk):
         self.log_box.see("end")  
         self.log_box.configure(state="disabled")
 
+    def log_error(self, source, e):
+        import traceback
+
+        self.log(f"❌ [{source}] {type(e).__name__}: {e}")
+
+        for line in traceback.format_exc().splitlines():
+            self.log(line)
+
     def test_window_focus(self):
-        """測試是否能成功抓取並切換指定標題的遊戲視窗（改為完全匹配）"""
         target_title = self.entry_win_title.get().strip()
+
         self.log(f"🔍 正在測試尋找視窗: 「{target_title}」...")
-        
+
         try:
-            # 撈出所有包含該關鍵字的視窗
             all_windows = gw.getWindowsWithTitle(target_title)
+
             win = None
-            
-            # 優先尋找「完全相同」的視窗，避開瀏覽器分頁
+
             for w in all_windows:
                 if w.title == target_title:
                     win = w
                     break
-            
-            # 如果找不到完全相同的，就拿第一個（備用）
+
             if not win and all_windows:
                 win = all_windows[0]
-                
+
             if win:
                 if win.isMinimized:
                     win.restore()
+
                 win.activate()
-                self.log(f"✅ 成功聚焦視窗！標題為: 「{win.title}」")
-                self.save_config()  
+
+                self.log(
+                    f"✅ 成功聚焦視窗！標題為: 「{win.title}」"
+                )
+
+                self.save_config()
+
             else:
-                self.log(f"❌ 找不到視窗「{target_title}」。請確認模擬器最頂部的文字！")
+                self.log(
+                    f"❌ 找不到視窗「{target_title}」"
+                )
+
         except Exception as e:
-            self.log(f"⚠️ 視窗切換失敗錯誤: {e}")
+            self.log_error("test_window_focus", e)
 
     def load_config(self):
-        if os.path.exists(CONFIG_FILE):
-            try:
-                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                    config = json.load(f)
-                
-                if "game_zone" in config and config["game_zone"]:
-                    self.game_zone = config["game_zone"]
-                    self.lbl_zone_status.configure(text="已載入 ✔", text_color="green")
-                
-                if "button_pos" in config and config["button_pos"]:
-                    self.button_pos = tuple(config["button_pos"])
-                    self.lbl_pos_status.configure(text=f"X:{self.button_pos[0]}, Y:{self.button_pos[1]} ✔", text_color="green")
-                
-                if "pixel_buffer" in config:
-                    self.entry_buffer.delete(0, "end")
-                    self.entry_buffer.insert(0, str(config["pixel_buffer"]))
+        try:
+            if not os.path.exists(CONFIG_FILE):
+                return
 
-                if "window_title" in config:
-                    self.entry_win_title.delete(0, "end")
-                    self.entry_win_title.insert(0, str(config["window_title"]))
-                
-                if os.path.exists(ICON_PATH):
-                    self.has_icon = True
-                    self.lbl_icon_status.configure(text="已載入 ✔", text_color="green")
-                
-                self.log("成功從 config.json 載入歷史設定值。")
-            except Exception as e:
-                self.log(f"載入設定檔失敗: {e}")
+            with open(
+                CONFIG_FILE,
+                "r",
+                encoding="utf-8"
+            ) as f:
+                config = json.load(f)
+
+            if "game_zone" in config and config["game_zone"]:
+                self.game_zone = config["game_zone"]
+
+                self.lbl_zone_status.configure(
+                    text="已載入 ✔",
+                    text_color="green"
+                )
+
+            if "button_pos" in config and config["button_pos"]:
+                self.button_pos = tuple(config["button_pos"])
+
+                self.lbl_pos_status.configure(
+                    text=f"X:{self.button_pos[0]}, Y:{self.button_pos[1]} ✔",
+                    text_color="green"
+                )
+
+            if "pixel_buffer" in config:
+                self.entry_buffer.delete(0, "end")
+                self.entry_buffer.insert(
+                    0,
+                    str(config["pixel_buffer"])
+                )
+
+            if "window_title" in config:
+                self.entry_win_title.delete(0, "end")
+                self.entry_win_title.insert(
+                    0,
+                    str(config["window_title"])
+                )
+
+            if os.path.exists(ICON_PATH):
+                self.has_icon = True
+
+                self.lbl_icon_status.configure(
+                    text="已載入 ✔",
+                    text_color="green"
+                )
+
+            self.log("成功從 config.json 載入歷史設定值。")
+
+        except Exception as e:
+            self.log_error("load_config", e)
 
     def save_config(self):
         try:
-            buffer_val = int(self.entry_buffer.get().strip())
+            buffer_val = int(
+                self.entry_buffer.get().strip()
+            )
+
         except ValueError:
-            self.log("❌ 錯誤：PIXEL_BUFFER 必須輸入整數數字！")
+            self.log(
+                "❌ 錯誤：PIXEL_BUFFER 必須輸入整數數字！"
+            )
             return
 
         config_data = {
@@ -237,90 +283,290 @@ class FishingBotGUI(ctk.CTk):
             "button_pos": self.button_pos,
             "pixel_buffer": buffer_val
         }
-        
+
         try:
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(config_data, f, indent=4, ensure_ascii=False)
+            with open(
+                CONFIG_FILE,
+                "w",
+                encoding="utf-8"
+            ) as f:
+                json.dump(
+                    config_data,
+                    f,
+                    indent=4,
+                    ensure_ascii=False
+                )
+
             self.log("💾 設定檔已成功儲存！")
+
         except Exception as e:
-            self.log(f"儲存設定檔失敗: {e}")
-
+            self.log_error("save_config", e)
+            
     def select_game_zone(self):
-        self.log("請在全螢幕畫面上框選「釣魚進度條」，完成後按 ENTER")
-        self.withdraw()  
-        time.sleep(0.3)
+        try:
+            self.log(
+                "請在全螢幕畫面上框選「釣魚進度條」，完成後按 ENTER"
+            )
 
-        with mss.mss() as sct:
-            monitor = sct.monitors[1]  
-            screen_img = np.array(sct.grab(monitor))
-            screen_bgr = cv2.cvtColor(screen_img, cv2.COLOR_BGRA2BGR)
+            self.withdraw()
 
-            cv2.namedWindow("Select_Zone", cv2.WND_PROP_FULLSCREEN)
-            cv2.setWindowProperty("Select_Zone", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-            roi = cv2.selectROI("Select_Zone", screen_bgr, showCrosshair=True, fromCenter=False)
-            cv2.destroyAllWindows()
+            time.sleep(0.3)
 
-        self.deiconify()  
+            with mss.mss() as sct:
+                monitor = sct.monitors[1]
 
-        if roi[2] > 0 and roi[3] > 0:
-            self.game_zone = {
-                "left": int(roi[0] + monitor["left"]),
-                "top": int(roi[1] + monitor["top"]),
-                "width": int(roi[2]),
-                "height": int(roi[3])
-            }
-            self.lbl_zone_status.configure(text="已設定 ✔", text_color="green")
-            self.log(f"區域設定成功 -> W:{self.game_zone['width']}, H:{self.game_zone['height']}")
-            self.save_config()  # 自動儲存
-        else:
-            self.log("取消區域選取。")
+                self.log(f"[DEBUG] Monitor={monitor}")
+
+                screen_img = np.array(
+                    sct.grab(monitor)
+                )
+
+                screen_bgr = cv2.cvtColor(
+                    screen_img,
+                    cv2.COLOR_BGRA2BGR
+                )
+
+                cv2.namedWindow(
+                    "Select_Zone",
+                    cv2.WND_PROP_FULLSCREEN
+                )
+
+                cv2.setWindowProperty(
+                    "Select_Zone",
+                    cv2.WND_PROP_FULLSCREEN,
+                    cv2.WINDOW_FULLSCREEN
+                )
+
+                roi = cv2.selectROI(
+                    "Select_Zone",
+                    screen_bgr,
+                    showCrosshair=True,
+                    fromCenter=False
+                )
+
+                cv2.destroyAllWindows()
+
+            self.deiconify()
+
+            if roi[2] > 0 and roi[3] > 0:
+
+                self.game_zone = {
+                    "left": int(roi[0] + monitor["left"]),
+                    "top": int(roi[1] + monitor["top"]),
+                    "width": int(roi[2]),
+                    "height": int(roi[3])
+                }
+
+                self.lbl_zone_status.configure(
+                    text="已設定 ✔",
+                    text_color="green"
+                )
+
+                self.log(
+                    f"區域設定成功 -> "
+                    f"W:{self.game_zone['width']} "
+                    f"H:{self.game_zone['height']}"
+                )
+
+                self.save_config()
+
+            else:
+                self.log("取消區域選取。")
+
+        except Exception as e:
+
+            try:
+                cv2.destroyAllWindows()
+            except:
+                pass
+
+            self.deiconify()
+
+            self.log_error(
+                "select_game_zone",
+                e
+            )
 
     def select_button_pos(self):
-        self.log("請將滑鼠移到遊戲的「收線按鈕」上...")
-        
-        def get_pos():
-            for i in range(3, 0, -1):
-                self.log(f"請瞄準按鈕... 倒數 {i} 秒")
-                time.sleep(1)
-            x, y = pyautogui.position()
-            self.button_pos = (x, y)
-            self.lbl_pos_status.configure(text=f"X:{x}, Y:{y} ✔", text_color="green")
-            self.log(f"按鈕座標已鎖定：({x}, {y})")
-            self.save_config()  # 自動儲存
 
-        threading.Thread(target=get_pos, daemon=True).start()
+        self.log(
+            "請將滑鼠移到遊戲的「收線按鈕」上..."
+        )
+
+        def get_pos():
+
+            try:
+
+                for i in range(3, 0, -1):
+
+                    self.log(
+                        f"請瞄準按鈕... 倒數 {i} 秒"
+                    )
+
+                    time.sleep(1)
+
+                x, y = pyautogui.position()
+
+                self.button_pos = (x, y)
+
+                self.lbl_pos_status.configure(
+                    text=f"X:{x}, Y:{y} ✔",
+                    text_color="green"
+                )
+
+                self.log(
+                    f"按鈕座標已鎖定：({x}, {y})"
+                )
+
+                self.save_config()
+
+            except Exception as e:
+
+                self.after(
+                    0,
+                    lambda err=e:
+                    self.log_error(
+                        "select_button_pos",
+                        err
+                    )
+                )
+
+        threading.Thread(
+            target=get_pos,
+            daemon=True
+        ).start()
 
     def capture_icon_template(self):
-        """讓使用者直接在螢幕上框選圖示，並自動儲存成 fish_icon.png"""
-        self.log("請在全螢幕畫面上，精準框選遊戲彈出的「開始釣魚圓形圖示」，完成後按 ENTER")
-        self.withdraw()
-        time.sleep(0.3)
 
-        with mss.mss() as sct:
-            monitor = sct.monitors[1]
-            screen_img = np.array(sct.grab(monitor))
-            screen_bgr = cv2.cvtColor(screen_img, cv2.COLOR_BGRA2BGR)
+        try:
 
-            cv2.namedWindow("Capture_Icon", cv2.WND_PROP_FULLSCREEN)
-            cv2.setWindowProperty("Capture_Icon", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-            roi = cv2.selectROI("Capture_Icon", screen_bgr, showCrosshair=True, fromCenter=False)
-            cv2.destroyAllWindows()
+            self.log(
+                "請在全螢幕畫面上，精準框選遊戲彈出的開始釣魚圖示"
+            )
 
-        self.deiconify()
+            self.withdraw()
 
-        if roi[2] > 0 and roi[3] > 0:
-            # 從全螢幕截圖中裁剪出使用者選擇的局部區塊
-            x, y, w, h = int(roi[0]), int(roi[1]), int(roi[2]), int(roi[3])
-            cropped_icon = screen_bgr[y:y+h, x:x+w]
-            
-            # 將裁剪後的圖示儲存到本機目錄
-            cv2.imwrite(ICON_PATH, cropped_icon)
-            self.has_icon = True
-            self.lbl_icon_status.configure(text="已設定 ✔", text_color="green")
-            self.log("💾 圖示範本已成功擷取並儲存為 fish_icon.png！")
-            self.save_config()
-        else:
-            self.log("取消圖示擷取。")
+            time.sleep(0.3)
+
+            with mss.mss() as sct:
+
+                monitor = sct.monitors[1]
+
+                self.log(
+                    f"[DEBUG] Monitor={monitor}"
+                )
+
+                screen_img = np.array(
+                    sct.grab(monitor)
+                )
+
+                screen_bgr = cv2.cvtColor(
+                    screen_img,
+                    cv2.COLOR_BGRA2BGR
+                )
+
+                cv2.namedWindow(
+                    "Capture_Icon",
+                    cv2.WND_PROP_FULLSCREEN
+                )
+
+                cv2.setWindowProperty(
+                    "Capture_Icon",
+                    cv2.WND_PROP_FULLSCREEN,
+                    cv2.WINDOW_FULLSCREEN
+                )
+
+                roi = cv2.selectROI(
+                    "Capture_Icon",
+                    screen_bgr,
+                    showCrosshair=True,
+                    fromCenter=False
+                )
+
+                cv2.destroyAllWindows()
+
+            self.deiconify()
+
+            if roi[2] > 0 and roi[3] > 0:
+
+                x, y, w, h = (
+                    int(roi[0]),
+                    int(roi[1]),
+                    int(roi[2]),
+                    int(roi[3])
+                )
+
+                cropped_icon = screen_bgr[
+                    y:y+h,
+                    x:x+w
+                ]
+
+                try:
+                    self.log(f"[DEBUG] Save Path={ICON_PATH}")
+                    self.log(f"[DEBUG] Shape={cropped_icon.shape}")
+                    self.log(f"[DEBUG] Size={cropped_icon.size}")
+
+                    if cropped_icon.size == 0:
+                        raise ValueError("cropped_icon 為空")
+
+                    img = Image.fromarray(
+                        cv2.cvtColor(
+                            cropped_icon,
+                            cv2.COLOR_BGR2RGB
+                        )
+                    )
+
+                    img.save(
+                        ICON_PATH,
+                        format="PNG"
+                    )
+
+                    self.log("✅ Pillow 儲存成功")
+                
+                    result=True
+
+                except Exception as e:
+                    self.log_error(
+                        "PIL.Image.save",
+                        e
+                    )
+
+                    result=False
+
+                self.log(
+                    f"[DEBUG] Save Result={result}"
+                )
+
+                self.has_icon = True
+
+                self.lbl_icon_status.configure(
+                    text="已設定 ✔",
+                    text_color="green"
+                )
+
+                self.log(
+                    "💾 圖示範本已成功擷取並儲存"
+                )
+
+                self.save_config()
+
+            else:
+
+                self.log("取消圖示擷取。")
+
+        except Exception as e:
+
+            try:
+                cv2.destroyAllWindows()
+            except:
+                pass
+
+            self.deiconify()
+
+            self.log_error(
+                "capture_icon_template",
+                e
+            )
 
     def toggle_bot(self):
         if self.is_running:
@@ -494,7 +740,14 @@ class FishingBotGUI(ctk.CTk):
                                 # 🟢 修正點：將這裡的變數改為與上面一致的局部變數 t
                                 self.after(0, lambda t=target_window_title: self.log(f"❌ 找不到視窗「{t}」，請檢查上方標題欄。"))
                         except Exception as e:
-                            self.after(0, lambda e=str(e): self.log(f"⚠️ 視窗切換失敗: {e}"))
+                            self.after(
+                                0,
+                                lambda err=e:
+                                self.log_error(
+                                    "fishing_logic",
+                                    err
+                                )
+                            )
                         
                         idle_start_time = time.time()# --- ⏳ 30秒閒置防斷線重置機制 ---
                 if action_triggered:
