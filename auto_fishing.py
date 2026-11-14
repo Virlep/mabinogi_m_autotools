@@ -14,7 +14,7 @@ import keyboard
 import pygetwindow as gw  # 在執行緒內動態引入視窗管理庫
 from PIL import Image
 
-VERSION = "v0.4.1"  # 🟢 增加這一行，定義當前腳本版本
+VERSION = "v0.4.2"  # 🟢 增加這一行，定義當前腳本版本
 
 # 設定 GUI 主題
 ctk.set_appearance_mode("System")
