@@ -1,0 +1,2 @@
+# mabinogi_m_autotools
+mabinogi_m_autotools
