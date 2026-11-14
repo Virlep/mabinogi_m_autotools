@@ -1,0 +1,14 @@
+{
+    "window_title": "瑪奇 Mobile",
+    "game_zone": {
+        "left": 1851,
+        "top": 449,
+        "width": 168,
+        "height": 29
+    },
+    "button_pos": [
+        1923,
+        1208
+    ],
+    "pixel_buffer": 50
+}
